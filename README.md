@@ -26,6 +26,12 @@ Forks and independent continuation of the project are welcome, subject to the ex
 
 **There is currently no designated successor or recommended fork.**
 
+The following independent fork has been brought to my attention:
+
+[bmarques1995/OpenCppCoverage](https://github.com/bmarques1995/OpenCppCoverage)
+
+**Note: I have not reviewed or tested this fork.**
+
 If you actively maintain a fork of this project and would like it to be considered for inclusion here, please contact me through OpenCppCoverage@gmail.com.
 
 I intend to link from this page to the most active community-maintained fork I am aware of. The selected fork may change over time as development activity changes.
