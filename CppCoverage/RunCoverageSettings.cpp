@@ -33,6 +33,7 @@ namespace CppCoverage
 	      continueAfterCppException_{false},
 	      maxUnmatchPathsForWarning_{0},
 	      optimizedBuildSupport_{false},
+	      allowMixedModeModules_{false},
 	      excludedLineRegexes_{excludedLineRegexes},
 	      substitutePdbSourcePath_{substitutePdbSourcePath}
 	{
@@ -66,6 +67,12 @@ namespace CppCoverage
 	void RunCoverageSettings::SetOptimizedBuildSupport(bool optimizedBuildSupport)
 	{
 		optimizedBuildSupport_ = optimizedBuildSupport;
+	}
+
+	//-------------------------------------------------------------------------
+	void RunCoverageSettings::SetAllowMixedModeModules(bool allowMixedModeModules)
+	{
+		allowMixedModeModules_ = allowMixedModeModules;
 	}
 
 	//-------------------------------------------------------------------------
@@ -114,6 +121,12 @@ namespace CppCoverage
 	bool RunCoverageSettings::GetOptimizedBuildSupport() const
 	{
 		return optimizedBuildSupport_;
+	}
+
+	//-------------------------------------------------------------------------
+	bool RunCoverageSettings::GetAllowMixedModeModules() const
+	{
+		return allowMixedModeModules_;
 	}
 
 	//-------------------------------------------------------------------------

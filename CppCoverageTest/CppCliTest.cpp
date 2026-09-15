@@ -49,4 +49,41 @@ namespace CppCoverageTest
 		ASSERT_EQ(1, modules.size());
 		ASSERT_EQ(sharedLibModulePath, modules.at(0)->GetPath());
 	}
+
+	//---------------------------------------------------------------------
+	TEST(CppCliTest, ManagedUnManagedModuleWithAllowMixedModeModules)
+	{
+		auto vsPath = TestHelper::GetVisualStudioPath();
+		fs::path vsConsoleTestPath = vsPath / "Common7" / "IDE" /
+		                             "CommonExtensions" / "Microsoft" /
+		                             "TestWindow" / "vstest.console.exe";
+		auto testCppCliPath = (fs::path{OUT_DIR} / "DefaultTest.dll").wstring();
+		auto sharedLibModulePath = TestCoverageSharedLib::GetOutputBinaryPath();
+
+		TestTools::CoverageArgs coverageArgs(
+		    {testCppCliPath}, testCppCliPath, L"None");
+		coverageArgs.modulePatternCollection_.push_back(
+		    sharedLibModulePath.wstring());
+		coverageArgs.programToRun_ = vsConsoleTestPath;
+		coverageArgs.allowMixedModeModules_ = true;
+
+		auto coverage = TestTools::ComputeCoverageDataPatterns(coverageArgs);
+		ASSERT_EQ(0, coverage.GetExitCode());
+
+		// DefaultTest.dll is a /clr assembly, so it is skipped by default (see
+		// the test above). With allowMixedModeModules it is covered too.
+		std::vector<fs::path> modulePaths;
+		for (const auto& module : coverage.GetModules())
+			modulePaths.push_back(module->GetPath());
+
+		ASSERT_EQ(2, modulePaths.size());
+		ASSERT_NE(modulePaths.end(),
+		          std::find(modulePaths.begin(),
+		                    modulePaths.end(),
+		                    fs::path{testCppCliPath}));
+		ASSERT_NE(modulePaths.end(),
+		          std::find(modulePaths.begin(),
+		                    modulePaths.end(),
+		                    sharedLibModulePath));
+	}
 }

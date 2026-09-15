@@ -30,53 +30,114 @@
 #include "FileFilter/LineInfo.hpp"
 
 #include "Tools/PEFileHeader.hpp"
+#include "Tools/ProcessMemory.hpp"
 #include "Tools/Log.hpp"
 
 namespace CppCoverage
 {
 	namespace
 	{
+		// The CLR header a managed or mixed-mode image points to from data
+		// directory entry 14. Declared here because CorHdr.h is not part of the
+		// Windows SDK. Only the first fields are needed.
+		struct Cor20Header
+		{
+			DWORD cb;
+			WORD MajorRuntimeVersion;
+			WORD MinorRuntimeVersion;
+			IMAGE_DATA_DIRECTORY MetaData;
+			DWORD Flags;
+		};
+
+		const DWORD Cor20FlagsILOnly = 0x00000001;
+
+		enum class ModuleType
+		{
+			// No CLR header at all.
+			Native,
+			// A CLR header without the IL-only flag: the image holds both
+			// native machine code and managed code, as produced by /clr.
+			MixedMode,
+			// A CLR header with the IL-only flag: nothing to breakpoint.
+			ManagedOnly
+		};
+
+		//---------------------------------------------------------------------
+		std::wstring ToString(ModuleType moduleType)
+		{
+			switch (moduleType)
+			{
+				case ModuleType::Native: return L"native";
+				case ModuleType::MixedMode: return L"mixed mode";
+				case ModuleType::ManagedOnly: return L"managed";
+			}
+			return L"unknown";
+		}
+
 		struct ModuleKind : private Tools::IPEFileHeaderHandler
 		{
 			//----------------------------------------------------------------------------
-			bool IsNativeModule(HANDLE hProcess, DWORD64 baseOfImage)
+			ModuleType GetModuleType(HANDLE hProcess, DWORD64 baseOfImage)
 			{
 				Tools::PEFileHeader fileHeader;
 
 				fileHeader.Load(hProcess, baseOfImage, *this);
-				return isNativeModule_;
+				return moduleType_;
 			}
 
 		  private:
 			//-----------------------------------------------------------------
 			template <typename T_IMAGE_NT_HEADERS>
-			void OnNtHeader(const T_IMAGE_NT_HEADERS& ntHeaders)
+			void OnNtHeader(HANDLE hProcess,
+			                DWORD64 baseOfImage,
+			                const T_IMAGE_NT_HEADERS& ntHeaders)
 			{
 				const auto& optionalHeader = ntHeaders.OptionalHeader;
 				auto dataDirectory =
 				    optionalHeader
 				        .DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR];
-				isNativeModule_ = dataDirectory.VirtualAddress == 0 &&
-				                  dataDirectory.Size == 0;
+				if (dataDirectory.VirtualAddress == 0 && dataDirectory.Size == 0)
+				{
+					moduleType_ = ModuleType::Native;
+					return;
+				}
+
+				moduleType_ = IsILOnly(hProcess, baseOfImage, dataDirectory)
+				                  ? ModuleType::ManagedOnly
+				                  : ModuleType::MixedMode;
 			}
 
 			//-----------------------------------------------------------------
-			void OnNtHeader32(HANDLE,
-			                  DWORD64,
+			static bool IsILOnly(HANDLE hProcess,
+			                     DWORD64 baseOfImage,
+			                     const IMAGE_DATA_DIRECTORY& dataDirectory)
+			{
+				if (dataDirectory.Size < sizeof(Cor20Header))
+					return true;
+
+				auto cor20Header = Tools::ReadStructInProcessMemory<Cor20Header>(
+				    hProcess, baseOfImage + dataDirectory.VirtualAddress);
+
+				return (cor20Header->Flags & Cor20FlagsILOnly) != 0;
+			}
+
+			//-----------------------------------------------------------------
+			void OnNtHeader32(HANDLE hProcess,
+			                  DWORD64 baseOfImage,
 			                  const IMAGE_NT_HEADERS32& ntHeader) override
 			{
-				OnNtHeader(ntHeader);
+				OnNtHeader(hProcess, baseOfImage, ntHeader);
 			}
 
 			//-----------------------------------------------------------------
-			void OnNtHeader64(HANDLE,
-			                  DWORD64,
+			void OnNtHeader64(HANDLE hProcess,
+			                  DWORD64 baseOfImage,
 			                  const IMAGE_NT_HEADERS64& ntHeader) override
 			{
-				OnNtHeader(ntHeader);
+				OnNtHeader(hProcess, baseOfImage, ntHeader);
 			}
 
-			bool isNativeModule_ = true;
+			ModuleType moduleType_ = ModuleType::Native;
 		};
 	}
 
@@ -86,12 +147,14 @@ namespace CppCoverage
 	    std::shared_ptr<ExecutedAddressManager> executedAddressManager,
 	    std::shared_ptr<ICoverageFilterManager> coverageFilterManager,
 	    std::unique_ptr<DebugInformationEnumerator> debugInformationEnumerator,
-	    std::shared_ptr<FilterAssistant> filterAssistant)
+	    std::shared_ptr<FilterAssistant> filterAssistant,
+	    bool allowMixedModeModules)
 	    : breakPoint_{breakPoint},
 	      executedAddressManager_{executedAddressManager},
 	      coverageFilterManager_{coverageFilterManager},
 	      debugInformationEnumerator_{std::move(debugInformationEnumerator)},
-	      filterAssistant_{std::move(filterAssistant)}
+	      filterAssistant_{std::move(filterAssistant)},
+	      allowMixedModeModules_{allowMixedModeModules}
 	{
 	}
 
@@ -104,11 +167,19 @@ namespace CppCoverage
 	    HANDLE hProcess,
 	    void* baseOfImage)
 	{
-		if (!ModuleKind{}.IsNativeModule(
-		        hProcess, reinterpret_cast<DWORD64>(baseOfImage)))
+		auto moduleType = ModuleKind{}.GetModuleType(
+		    hProcess, reinterpret_cast<DWORD64>(baseOfImage));
+
+		if (moduleType == ModuleType::ManagedOnly ||
+		    (moduleType == ModuleType::MixedMode && !allowMixedModeModules_))
 		{
-			LOG_INFO << modulePath.wstring()
-			         << " is skipped as it is a managed module.";
+			LOG_INFO << modulePath.wstring() << " is skipped as it is a "
+			         << ToString(moduleType) << " module.";
+			if (moduleType == ModuleType::MixedMode)
+			{
+				LOG_INFO << L"Use --allow_mixed_mode_modules to cover the "
+				            L"native code of this module.";
+			}
 			return false;
 		}
 

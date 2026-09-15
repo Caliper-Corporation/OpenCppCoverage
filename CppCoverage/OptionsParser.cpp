@@ -445,6 +445,9 @@ namespace CppCoverage
 			options.EnableContinueAfterCppExceptionMode();
 		if (variablesMap.IsOptionSelected(ProgramOptions::OptimizedBuildOption))
 			options.EnableOptimizedBuildSupport();
+		if (variablesMap.IsOptionSelected(
+		        ProgramOptions::AllowMixedModeModulesOption))
+			options.EnableAllowMixedModeModules();
 		if (variablesMap.IsOptionSelected(ProgramOptions::StopOnAssertOption))
 			options.EnableStopOnAssertMode();
 

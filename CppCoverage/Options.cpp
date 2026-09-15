@@ -49,6 +49,7 @@ namespace CppCoverage
 		, isAggregateByFileModeEnabled_{true}
 		, isContinueAfterCppExceptionModeEnabled_{false}
 		, isOptimizedBuildSupportEnabled_{false}
+		, isAllowMixedModeModulesEnabled_{false}
 	{
 		if (startInfo)
 			optionalStartInfo_ = *startInfo;
@@ -196,6 +197,18 @@ namespace CppCoverage
 	}
 
 	//-------------------------------------------------------------------------
+	void Options::EnableAllowMixedModeModules()
+	{
+		isAllowMixedModeModulesEnabled_ = true;
+	}
+
+	//-------------------------------------------------------------------------
+	bool Options::IsAllowMixedModeModulesEnabled() const
+	{
+		return isAllowMixedModeModulesEnabled_;
+	}
+
+	//-------------------------------------------------------------------------
 	void Options::AddExcludedLineRegex(const std::wstring& excludedRegex)
 	{
 		excludedLineRegexes_.push_back(excludedRegex);
@@ -231,6 +244,7 @@ namespace CppCoverage
 		ostr << L"Aggregate by file: " << options.isAggregateByFileModeEnabled_ << std::endl;
 		ostr << L"Continue after C++ exception: " << options.isContinueAfterCppExceptionModeEnabled_ << std::endl;
 		ostr << L"Optimized build support: " << options.isOptimizedBuildSupportEnabled_ << std::endl;
+		ostr << L"Allow mixed mode modules: " << options.isAllowMixedModeModulesEnabled_ << std::endl;
 
 		ostr << L"Export: ";
 		for (const auto& optionExport : options.exports_)

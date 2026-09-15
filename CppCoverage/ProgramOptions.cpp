@@ -83,8 +83,12 @@ namespace CppCoverage
               (ProgramOptions::UnifiedDiffOption.c_str(),
 					po::value<T_Strings>()->composing(), GetUnifiedDiffHelp().c_str())
 				(ProgramOptions::ContinueAfterCppExceptionOption.c_str(), "Try to continue after throwing a C++ exception.")
-				(ProgramOptions::OptimizedBuildOption.c_str(), 
+				(ProgramOptions::OptimizedBuildOption.c_str(),
 					"Enable heuristics to support optimized build. See documentation for restrictions.")
+				(ProgramOptions::AllowMixedModeModulesOption.c_str(),
+					"Instrument mixed-mode (/clr) modules instead of skipping them. "
+					"A mixed-mode module contains both native and managed code, and by default "
+					"the whole module is skipped. Use excluded_sources to keep managed sources out.")
 				(ProgramOptions::ExcludedLineRegexOption.c_str(), po::value<T_Strings>()->composing(),
 					"Exclude all lines match the regular expression. Regular expression must match the whole line.")
 				(ProgramOptions::SubstitutePdbSourcePathOption.c_str(), po::value<T_Strings>()->composing(),
@@ -126,6 +130,7 @@ namespace CppCoverage
 	const std::string ProgramOptions::UnifiedDiffOption = "unified_diff";
 	const std::string ProgramOptions::ContinueAfterCppExceptionOption = "continue_after_cpp_exception";
 	const std::string ProgramOptions::OptimizedBuildOption = "optimized_build";
+	const std::string ProgramOptions::AllowMixedModeModulesOption = "allow_mixed_mode_modules";
 	const std::string ProgramOptions::ExcludedLineRegexOption = "excluded_line_regex";
 	const std::string ProgramOptions::SubstitutePdbSourcePathOption = "substitute_pdb_source_path";
     const std::string ProgramOptions::StopOnAssertOption = "stop_on_assert";

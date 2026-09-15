@@ -148,6 +148,7 @@ namespace CppCoverageTest
 			settings.SetCoverChildren(args.coverChildren_);
 			settings.SetContinueAfterCppException(args.continueAfterCppException_);
 			settings.SetOptimizedBuildSupport(args.optimizedBuildSupport_);
+			settings.SetAllowMixedModeModules(args.allowMixedModeModules_);
 
 			auto coverageData = codeCoverageRunner.RunCoverage(settings);
 
