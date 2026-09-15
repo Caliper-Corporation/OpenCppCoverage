@@ -30,3 +30,5 @@ CoverageData.pb.h
 CoverageData.pb.cc
 
 .clang-format
+nuget.exe
+*.nupkg
